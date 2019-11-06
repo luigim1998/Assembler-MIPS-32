@@ -1,0 +1,15 @@
+R0	zero	Always contains 0
+R1	at	Assembler temporary
+R2-R3	v0-v1	Function return value
+R4-R7	a0-a3	Function parameters
+R8-R15	t0-t7	Function temporary values
+R16-R23	s0-s7	Saved registers across function calls
+R24-R25	t8-t9	Function temporary values
+R26-R27	k0-k1	Reserved for interrupt handler
+R28	gp	Global pointer
+R29	sp	Stack Pointer
+R30	s8	Saved register across function calls
+R31	ra	Return address from function call
+HI-LO	lo-hi	Multiplication/division results
+PC	Program Counter	Points at 8 bytes past current instruction
+EPC	epc	Exception program counter return address
