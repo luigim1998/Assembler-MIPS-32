@@ -58,11 +58,13 @@ while(cont < len(codigo)): #busca por labels
     if(codigo[cont].count(':') == 1): #busca por labels
         linha = codigo[cont].partition(':') #separa o código da label
         print(linha)
-        if(len(linha[0]) ):
+        if(len(linha[0]) == 0):
             raise Exception('Sintaxe incorreta')
-        if(!linha[0][0].isalpha()):
-            raise Exception('Nome de label imprópria')
+        if(not( linha[0][0].isalpha())):
+            raise Exception('Nome de label inicia somente com número')
         for i in linha[0]:
+            if(not (i.isalpha() or i.isdigit())):
+                raise Exception('Nome de label inválida')
 
     elif(codigo[cont].count(':') > 1): #não pode haver mais de dois ':'
         raise Exception('Sintaxe inválida')
