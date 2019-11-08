@@ -6,9 +6,9 @@
     add   $t2, $t0, $gp
     lw    $t2, 1064($t2)       # fetch the branch table entry
     jr    $t2                  # go...
-is0:
+is0:      
     sw    $zero, 28($gp)       # A[0] = 0
-is2:addi  $t0, $zero, 1        # = 1
+is2: addi  $t0, $zero, 1        # = 1
     sw    $t0, 32($gp)         # A[1] = 1
 def:
     addi  $t0, $zero, -1       # = -1
