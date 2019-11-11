@@ -11,6 +11,46 @@ def decimalToBinary(n, largura):
     elif(len(binary) < largura):
         return '0'*(largura-len(binary)) + binary
 
+def validate_reg(nome):
+    return nome in registradores
+
+def validate_imm(imm):
+    return imm.isdigit()
+
+def instrucao_i(linha):
+    """
+    Retorna a instrução em binário.
+    :parâmetro linha: a linha do código.
+    :return: Binário da instrução.
+    """
+    #TODO: verificar o parâmetro e analisar se é número ou endereço de memória
+    linha = linha.split(maxsplit=1)
+    if(linha[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
+        campos = linha[1].split(',')
+        if(len(campos) == 2):
+            campos = [i.strip() for i in campos] #apaga os espaços vazios
+            if(validate_reg(campos[0])):
+                if(validate_imm(campos[1])): #é uma instrução válida
+                    if(linha[0] in ['lui']):
+                        aux = opcode_i[linha[0]][0] + '00000' + registradores[campos[0]][0] + decimalToBinary(int(campos[1]), 16)
+                    else:
+                        aux = opcode_i[linha[0]][0] + registradores[campos[0]][0] + '00001' + decimalToBinary(int(campos[1]), 16)
+                    binario.append(aux)
+                else:
+                    raise Exception("'{}': Campo imediato inválido".format(codigo[i]))
+            else:
+                raise Exception("'{}': nome de registrador inválido".format(codigo[i]))
+        else:
+            raise Exception("'{}': Formato dos campos inválidos".format(codigo[i]))
+    elif(linha[0] in ['addi', 'addiu', 'andi', 'lui', 'ori', 'slti','sltiu', 'xori']): #instrução reg, reg, imediato
+        campos = linha[1].split(',')
+        if(len(campos) == 3):
+            campos = [i.strip() for i in campos] #apaga os espaços vazios
+            if(validate_reg(campos[0]) and validate_reg(campos[1])):
+                if(validate_imm(campos[2])): #é uma instrução válida
+#TODO: CONTINUAR CÓDIGO
+#        #elif(linha[0] in []): #instrução reg, offset(reg)
+
 codigo = []
 registradores = {}
 opcode_i = {}
@@ -18,12 +58,6 @@ opcode_j = {}
 opcode_r = {}
 labels = {}
 binario = []
-
-def validate_reg(nome):
-    return nome in registradores
-
-def validate_imm(imm):
-    return imm.isdigit()
 
 with open('REGISTERS.txt', 'r') as f: #este arquivo possui os registradores
     linha = f.readline()
@@ -106,38 +140,11 @@ while(cont < len(codigo)): #busca por labels
     cont += 1
 
 for i in range(0, len(codigo)): #leitura do código
-    linha = codigo[i].split(maxsplit=1)
-    if(linha[0] in opcode_i):
-        if(linha[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
-            campos = linha[1].split(',')
-            if(len(campos) == 2):
-                campos = [i.strip() for i in campos] #apaga os espaços vazios
-                if(validate_reg(campos[0])):
-                    if(validate_imm(campos[1])): #é uma instrução válida
-                        if(linha[0] in ['lui']):
-                            aux = opcode_i[linha[0]][0] + '00000' + registradores[campos[0]][0] + decimalToBinary(int(campos[1]), 16)
-                        else:
-                            aux = opcode_i[linha[0]][0] + registradores[campos[0]][0] + '00001' + decimalToBinary(int(campos[1]), 16)
-                        binario.append(aux)
-                    else:
-                        raise Exception("'{}': Campo imediato inválido".format(codigo[i]))
-                else:
-                    raise Exception("'{}': nome de registrador inválido".format(codigo[i]))
-            else:
-                raise Exception("'{}': Formato dos campos inválidos".format(codigo[i]))
-        elif(linha[0] in ['addi', 'addiu', 'andi', 'lui', 'ori', 'slti','sltiu', 'xori']): #instrução reg, reg, imediato
-            campos = linha[1].split(',')
-            if(len(campos) == 3):
-                campos = [i.strip() for i in campos] #apaga os espaços vazios
-                if(validate_reg(campos[0]) and validate_reg(campos[1])):
-                    if(validate_imm(campos[2])): #é uma instrução válida
-
-#TODO: CONTINUAR CÓDIGO
-
-        elif(linha[0] in []): #instrução reg, offset(reg)
-        
-    elif (linha[0] in opcode_j):
-    elif (linha[0] in opcode_r):
+    inst = codigo[i].split(maxsplit=1)
+    if(inst[0] in opcode_i):
+        binario.append( instrucao_i(codigo[i]) )
+    elif (inst[0] in opcode_j):
+    elif (inst[0] in opcode_r):
     else:
         raise Exception('Instrução não reconhecida')
 
