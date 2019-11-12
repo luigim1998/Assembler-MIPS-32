@@ -27,10 +27,11 @@ def instrucao_i(linha):
     :return: Binário da instrução.
     """
     #TODO: verificar o parâmetro e analisar se é número ou endereço de memória
-    inst = linha.split(maxsplit=1)
-    if(inst[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução rs, imediato
-        campos = inst[1].split(',')
-        campos = [i.strip() for i in campos] #apaga os espaços vazios
+    campos = linha.split(maxsplit=1)
+    campos.extend(campos[1].split(','))
+    campos.pop(1)
+    campos = [i.strip() for i in campos] #apaga os espaços vazios
+    if(campos[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
         
         #verifica por erros
         if(len(campos) != 2):
@@ -38,20 +39,20 @@ def instrucao_i(linha):
         if(not validate_reg(campos[0])):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         
-        if(inst[0] in ['lui']):
-            if(validate_imm(campos[1])): #é uma instrução válida
+        if(campos[0] in ['lui']): #instrução rt, imediato
+            if(validate_imm(campos[1:])): #é uma instrução válida
                 return opcode_i[inst[0]][0] + '00000' + registradores[campos[0]][0] + decimalToBinary(int(campos[1]), 16)
             else:
                 raise Exception("'{}': Campo imediato inválido".format(linha))
                 
-        else:
+        else: #instrução rs, imediato
             if(validate_label(campo[1])): #é uma instrução válida
-                return opcode_i[inst[0]][0] + registradores[campos[0]][0] + opcode_i[linha[0]][1] + decimalToBinary(int(campos[1]), 16)
+                return opcode_i[campos[0]][0] + registradores[campos[0]][0] + opcode_i[linha[0]][1] + decimalToBinary(int(campos[1]), 16)
             else:
                 raise Exception("'{}': Campo de label inválido".format(linha))
 
-    elif(inst[0] in ['addi', 'addiu', 'andi', 'beq', 'lui', 'ori', 'slti','sltiu', 'xori']): #instrução reg, reg, imediato
-        campos = inst[1].split(',')
+    elif(campos[0] in ['addi', 'addiu', 'andi', 'beq', 'lui', 'ori', 'slti','sltiu', 'xori']): #instrução reg, reg, imediato
+        campos = campos[1].split(',')
         if(len(campos) == 3):
             campos = [i.strip() for i in campos] #apaga os espaços vazios
             if(validate_reg(campos[0]) and validate_reg(campos[1])):
