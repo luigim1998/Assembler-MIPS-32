@@ -49,7 +49,7 @@ def tratar_parentese(linha):
 
 def instrucao_i(linha):
     """
-    Retorna a instrução em binário.
+    Retorna a instrução tipo I em binário.
     :parâmetro linha: a linha do código.
     :return: Binário da instrução.
     """
@@ -90,7 +90,7 @@ def instrucao_i(linha):
                 raise Exception("'{}': Campo imediato inválido".format(linha))
         else: #instrução rs, rt, label
             if(validate_label(campos[3])): #é uma instrução válida
-                return opcode_i[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + decimalToBinary(labels[campos[3]], 16)
+                return opcode_i[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + decimalToBinary(int(labels[campos[3]]), 16)
             else:
                 raise Exception("'{}': Campo de label inválido".format(linha))
     elif(campos[0] in ['break', 'syscall']): #instrução break
@@ -103,12 +103,40 @@ def instrucao_i(linha):
         #verifica erros
         if(len(campos) != 4):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
-        if(not (validate_reg(campos[1]) and validate_reg(3)) ):
+        if(not (validate_reg(campos[1]) and validate_reg(campos[3])) ):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         if(not (validate_imm(campos[2])) ):
             raise Exception("'{}': Campo imediato inválido".format(linha))
 
         return opcode_i[campos[0]][0] + registradores[campos[3]] + registradores[campos[1]] + decimalToBinary(int(campos[2]), 16)
+
+def instrucao_j(linha):
+    """
+    Retorna a instrução tipo J em binário.
+    :parâmetro linha: a linha do código.
+    :return: Binário da instrução.
+    """
+    campos = tratar_linha(linha)
+
+    if(campos[0] in ['j', 'jal']): #instrução label
+        if(len(campos) != 2):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not validate_label(campos[1])):
+            raise Exception("'{}': Campo de label inválido".format(linha))
+        return opcode_j[campos[0]][0] + decimalToBinary(int(campos[1]), 26)
+    
+    elif(campos[0] in ['jalr']): #instrução rd, rs
+        if(len(campos) != 3):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+        return opcode_j[campos[0]][0] + registradores[campos[2]] + opcode_j[campos[0]][1] + registradores[campos[1]] + opcode_j[campos[0]][2] + opcode_j[campos[0]][3]
+    else: #instrução rs (instrução j)
+        if(len(campos) != 2):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not validate_reg(campos[1]) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+        return opcode_j[campos[0]][0] + registradores[campos[1]] + opcode_j[campos[0]][1]
 
 codigo = []
 registradores = {}
