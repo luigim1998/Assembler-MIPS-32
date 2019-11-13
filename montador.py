@@ -20,6 +20,14 @@ def validate_imm(imm):
 def validate_label(label):
     return label in labels
 
+def tratar_linha(linha):
+    campos = linha.split(maxsplit=1)
+    if(len(campos) >= 2):
+        campos.extend(campos[1].split(','))
+        campos.pop(1)
+        campos = [i.strip() for i in campos] #apaga os espaços vazios
+    return campos
+
 def instrucao_i(linha):
     """
     Retorna a instrução em binário.
@@ -27,36 +35,52 @@ def instrucao_i(linha):
     :return: Binário da instrução.
     """
     #TODO: verificar o parâmetro e analisar se é número ou endereço de memória
-    campos = linha.split(maxsplit=1)
-    campos.extend(campos[1].split(','))
-    campos.pop(1)
-    campos = [i.strip() for i in campos] #apaga os espaços vazios
+    campos = tratar_linha(linha)
+
     if(campos[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
         
         #verifica por erros
-        if(len(campos) != 2):
+        if(len(campos) != 3):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
-        if(not validate_reg(campos[0])):
+        if(not validate_reg(campos[1])):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         
         if(campos[0] in ['lui']): #instrução rt, imediato
-            if(validate_imm(campos[1:])): #é uma instrução válida
-                return opcode_i[inst[0]][0] + '00000' + registradores[campos[0]][0] + decimalToBinary(int(campos[1]), 16)
+            if(validate_imm(campos[2])): #é uma instrução válida
+                return opcode_i[campos[0]][0] + '00000' + registradores[campos[1]][0] + decimalToBinary(int(campos[2]), 16)
             else:
                 raise Exception("'{}': Campo imediato inválido".format(linha))
                 
         else: #instrução rs, imediato
-            if(validate_label(campo[1])): #é uma instrução válida
-                return opcode_i[campos[0]][0] + registradores[campos[0]][0] + opcode_i[linha[0]][1] + decimalToBinary(int(campos[1]), 16)
+            if(validate_label(campos[2])): #é uma instrução válida
+                return opcode_i[campos[0]][0] + registradores[campos[1]][0] + opcode_i[campos[0]][1] + decimalToBinary(int(campos[2]), 16)
             else:
                 raise Exception("'{}': Campo de label inválido".format(linha))
 
-    elif(campos[0] in ['addi', 'addiu', 'andi', 'beq', 'lui', 'ori', 'slti','sltiu', 'xori']): #instrução reg, reg, imediato
-        campos = campos[1].split(',')
-        if(len(campos) == 3):
-            campos = [i.strip() for i in campos] #apaga os espaços vazios
-            if(validate_reg(campos[0]) and validate_reg(campos[1])):
-                if(validate_imm(campos[2])): #é uma instrução válida
+    elif(campos[0] in ['addi', 'addiu', 'andi', 'beq', 'bne', 'ori', 'slti', 'sltiu', 'xori']): #instrução reg, reg, imediato
+        #verifica por erros
+        if(len(campos) != 4):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        if(campos[0] in ['addi', 'addiu', 'andi', 'ori', 'slti', 'sltiu', 'xori']): #instrução rt, rs, imediato
+            if(validate_imm(campos[3])): #é uma instrução válida
+                return opcode_i[campos[0]][0] + registradores[campos[1]][0] + registradores[campos[2]][0] + decimalToBinary(int(campos[3]), 16)
+            else:
+                raise Exception("'{}': Campo imediato inválido".format(linha))
+        else: #instrução rs, rt, label
+            if(validate_label(campos[3])): #é uma instrução válida
+                return opcode_i[campos[0]][0] + registradores[campos[1]][0] + registradores[campos[2]][0] + decimalToBinary(labels[campos[3]], 16)
+            else:
+                raise Exception("'{}': Campo de label inválido".format(linha))
+    elif(campos[0] in ['break', 'syscall']): #instrução break
+        if(len(campos) == 1):
+            return opcode_i[campos[0]][0] + '0'*20 + opcode_i[campos[0]][1]
+        else:
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+    else: #instrução rt, offset(rs) (lb, lbu, lh, lhu, lw, sb, sh, sw)
+
 #TODO: CONTINUAR CÓDIGO, colocar registradores nos comentários
     elif(linha[0] in []): #instrução reg, offset(reg)
 
