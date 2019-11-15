@@ -1,15 +1,9 @@
 def decimalToBinary(n, largura):  
-    binary = ''
-    if(n == 0):
-        return '0'
-    else:
-        while(n > 0):
-            binary = str(n%2) + binary
-            n = n//2
+    binary = "{0:{fill}{width}b}".format(n, fill='0', width=largura)
     if(len(binary) > largura):
         return binary[-largura:]
     else:
-        return "{0:{fill}{align}{width}}".format(binary, width = largura, fill='0', align='>')
+        return binary
 
 def validate_reg(nome):
     return nome in registradores
@@ -53,7 +47,7 @@ def instrucao_i(linha):
     :parâmetro linha: a linha do código.
     :return: Binário da instrução.
     """
-    #TODO: verificar unsigned
+    #TODO: verificar unsigned e se os endereços existem
     campos = tratar_linha(linha)
 
     if(campos[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
@@ -66,13 +60,13 @@ def instrucao_i(linha):
         
         if(campos[0] in ['lui']): #instrução rt, imediato
             if(validate_imm(campos[2])): #é uma instrução válida
-                return opcode_i[campos[0]][0] + '00000' + registradores[campos[1]] + decimalToBinary(int(campos[2]), 16)
+                return opcode_i[campos[0]][0] + '00000' + registradores[campos[1]] + decimalToBinary(int( campos[2] ), 16)
             else:
                 raise Exception("'{}': Campo imediato inválido".format(linha))
                 
-        else: #instrução rs, imediato
+        else: #instrução rs, label
             if(validate_label(campos[2])): #é uma instrução válida
-                return opcode_i[campos[0]][0] + registradores[campos[1]] + opcode_i[campos[0]] + decimalToBinary(int(campos[2]), 16)
+                return opcode_i[campos[0]][0] + registradores[campos[1]] + opcode_i[campos[0]][1] + decimalToBinary(int( labels[campos[2]] ), 16)
             else:
                 raise Exception("'{}': Campo de label inválido".format(linha))
 
@@ -123,7 +117,7 @@ def instrucao_j(linha):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
         if(not validate_label(campos[1])):
             raise Exception("'{}': Campo de label inválido".format(linha))
-        return opcode_j[campos[0]][0] + decimalToBinary(int(campos[1]), 26)
+        return opcode_j[campos[0]][0] + decimalToBinary(int( label[campos[1]] ), 26)
     
     elif(campos[0] in ['jalr']): #instrução rd, rs
         if(len(campos) != 3):
@@ -131,12 +125,88 @@ def instrucao_j(linha):
         if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         return opcode_j[campos[0]][0] + registradores[campos[2]] + opcode_j[campos[0]][1] + registradores[campos[1]] + opcode_j[campos[0]][2] + opcode_j[campos[0]][3]
-    else: #instrução rs (instrução j)
+    else: #instrução rs (instrução jr)
         if(len(campos) != 2):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
         if(not validate_reg(campos[1]) ):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         return opcode_j[campos[0]][0] + registradores[campos[1]] + opcode_j[campos[0]][1]
+
+def instrucao_r(linha):
+    """
+    Retorna a instrução tipo R em binário.
+    :parâmetro linha: a linha do código.
+    :return: Binário da instrução tipo R.
+    """
+    campos = tratar_linha(linha)
+
+    if(campos[0] in ['add', 'addu', 'and', 'nor', 'or', 'slt', 'sltu', 'srlv', 'sub', 'subu', 'xor']): #instrução rd, rs, rt
+
+        if(len(campos) != 4):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not (validate_reg(campos[2]) and validate_reg(campos[3]) and validate_reg(campos[1])) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + registradores[campos[2]] + registradores[campos[3]] + registradores[campos[1]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
+    
+    elif(campos[0] in ['div', 'divu', 'mult', 'multu']): #instrução rs, rt
+        if(len(campos) != 3):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
+
+    elif(campos[0] in ['mfc0', 'mtc0']): #instrução rt, rd
+        if(len(campos) != 3):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + opcode_r[campos[0]][1] + registradores[campos[1]] + registradores[campos[2]] + opcode_r[campos[0]][2]
+    
+    elif(campos[0] in ['mfhi', 'mflo']): #instrução rd
+        if(len(campos) != 2):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not validate_reg(campos[1]) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + opcode_r[campos[0]][1] + registradores[campos[1]] + opcode_r[campos[0]][2] + opcode_r[campos[0]][3]
+
+    elif(campos[0] in ['mthi', 'mtlo']): #instrução rs
+        if(len(campos) != 2):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not validate_reg(campos[1]) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + registradores[campos[1]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
+
+    elif(campos[0] in ['sll', 'sra', 'srl']): #instrução rd, rt, sa
+        if(len(campos) != 4):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not ( validate_reg(campos[1]) and validate_reg(campos[2]) ) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+        if(not validate_imm(campos[3]) ):
+            raise Exception("'{}': campo de shamt inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + '00000' + registradores[campos[2]] + registradores[campos[1]] + decimalToBinary(int(campos[3]), 5) + opcode_r[campos[0]][1]
+    
+    elif(campos[0] in ['mult', 'multu']): #instrução rs, rt
+        if(len(campos) != 3):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not ( validate_reg(campos[1]) and validate_reg(campos[2]) ) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
+
+    elif(campos[0] in ['sllv', 'srav', 'srlv']): #instrução rd, rt, rs
+        if(len(campos) != 4):
+            raise Exception("'{}': Formato dos campos inválidos".format(linha))
+        if(not ( validate_reg(campos[1]) and validate_reg(campos[2]) and validate_reg(campos[3]) ) ):
+            raise Exception("'{}': nome de registrador inválido".format(linha))
+
+        return opcode_r[campos[0]][0] + registradores[campos[3]] + registradores[campos[2]] + registradores[campos[1]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
+
 
 codigo = []
 registradores = {}
@@ -162,7 +232,6 @@ with open('OPCODE_R.txt', 'r') as f: #este arquivo possui os opcodes do tipo R
         linha = linha.strip() #retira os espaços no começo e final da linha
         linha = linha.split() #separa o registrador e o binário
         opcode_r[linha[0]] = linha[1:] #adiciona no dicionário
-
         linha = f.readline()
 
 with open('OPCODE_J.txt', 'r') as f: #este arquivo possui os opcodes do tipo R
@@ -172,7 +241,6 @@ with open('OPCODE_J.txt', 'r') as f: #este arquivo possui os opcodes do tipo R
         linha = linha.strip() #retira os espaços no começo e final da linha
         linha = linha.split() #separa o registrador e o binário
         opcode_j[linha[0]] = linha[1:] #adiciona no dicionário
-
         linha = f.readline()
 
 with open('OPCODE_I.txt', 'r') as f: #este arquivo possui os opcodes do tipo R
@@ -221,24 +289,39 @@ while(cont < len(codigo)): #busca por labels
             codigo.pop(cont) #apaga a linha
         else:
             codigo[cont] = linha[2].strip()
+            cont += 1
 
     elif(codigo[cont].count(':') > 1): #não pode haver mais de dois ':'
         raise Exception('Sintaxe inválida')
-    cont += 1
+
+    else:
+        cont += 1
 
 for i in range(0, len(codigo)): #leitura do código
     inst = codigo[i].split(maxsplit=1)
     if(inst[0] in opcode_i):
         binario.append( instrucao_i(codigo[i]) )
     elif (inst[0] in opcode_j):
+        binario.append( instrucao_j(codigo[i]) )
     elif (inst[0] in opcode_r):
+        binario.append( instrucao_r(codigo[i]) )
     else:
         raise Exception('Instrução não reconhecida')
 
 
+with open('binario.txt', 'w') as f:
+    for linha in binario:
+        f.write(linha + '\n')
+
+
 print(registradores)
+print()
 print(opcode_i)
+print()
 print(opcode_j)
+print()
 print(opcode_r)
+print()
 print(codigo)
+print()
 print(labels)
