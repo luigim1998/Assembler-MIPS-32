@@ -1,15 +1,64 @@
-def decimalToBinary(n, largura):  
-    binary = "{0:{fill}{width}b}".format(n, fill='0', width=largura)
+def flip(c):
+	return '1' if (c == '0') else '0'
+
+def printOneAndTwosComplement(numero): 
+    '''Retorna a binário no complemento a 2
+    :parâmetro bin: número.
+    :return: Binário do número.
+    '''
+    bin = "{0:b}".format(numero) if (numero >= 0) else "{0:b}".format(-numero)
+    n = len(bin)
+    ones = "" 
+    twos = "" 
+
+    # inverte os bits 
+    for i in range(n): 
+        ones += flip(bin[i]) 
+
+    # soma o binário com 1 
+    ones = list(ones.strip("")) 
+    twos = list(ones) 
+    for i in range(n - 1, -1, -1): 
+	
+        if (ones[i] == '1'): 
+            twos[i] = '0'
+        else:		 
+            twos[i] = '1'
+            break
+		
+    # Se o bit mais significativo for 1, 
+    # incrementa um no final 
+    if (i == -1): 
+        twos.insert(0, '1') 
+
+    aux = ''
+    for i in twos:
+        aux += i
+    
+    return aux
+	
+# A função original printOneAndTwosComplement() e flip() 
+# foi contribuída por SHUBHAMSINGH10 e está disponível em: 
+# https://www.geeksforgeeks.org/1s-2s-complement-binary-number/
+
+def decimalToBinary(n, largura):
+    binary = printOneAndTwosComplement(n)
     if(len(binary) > largura):
         return binary[-largura:]
     else:
-        return binary
+        if(n >= 0):
+            return '0'*(largura - len(binary)) + binary
+        else:
+            return '1'*(largura - len(binary)) + binary
 
 def validate_reg(nome):
     return nome in registradores
 
 def validate_imm(imm):
-    return imm.isdigit()
+    return imm[1:].isdigit() if (imm[0] == '-') else imm.isdigit()
+
+def validate_uns(uns):
+    return uns.isdigit()
 
 def validate_label(label):
     return label in labels
@@ -47,7 +96,6 @@ def instrucao_i(linha):
     :parâmetro linha: a linha do código.
     :return: Binário da instrução.
     """
-    #TODO: verificar unsigned e se os endereços existem
     campos = tratar_linha(linha)
 
     if(campos[0] in ['bgez', 'bgezal', 'bgtz', 'blez', 'bltz', 'bltzal', 'lui']): #instrução reg, imediato
@@ -59,7 +107,7 @@ def instrucao_i(linha):
             raise Exception("'{}': nome de registrador inválido".format(linha))
         
         if(campos[0] in ['lui']): #instrução rt, imediato
-            if(validate_imm(campos[2])): #é uma instrução válida
+            if(validate_uns(campos[2])): #é uma instrução válida
                 return opcode_i[campos[0]][0] + '00000' + registradores[campos[1]] + decimalToBinary(int( campos[2] ), 16)
             else:
                 raise Exception("'{}': Campo imediato inválido".format(linha))
@@ -77,11 +125,16 @@ def instrucao_i(linha):
         if(not (validate_reg(campos[1]) and validate_reg(campos[2])) ):
             raise Exception("'{}': nome de registrador inválido".format(linha))
 
-        if(campos[0] in ['addi', 'addiu', 'andi', 'ori', 'slti', 'sltiu', 'xori']): #instrução rt, rs, imediato
+        if(campos[0] in ['addi', 'andi', 'ori', 'slti', 'xori']): #instrução rt, rs, imediato
             if(validate_imm(campos[3])): #é uma instrução válida
                 return opcode_i[campos[0]][0] + registradores[campos[2]] + registradores[campos[1]] + decimalToBinary(int(campos[3]), 16)
             else:
                 raise Exception("'{}': Campo imediato inválido".format(linha))
+        elif(campos[0] in ['addiu', 'sltiu']): #instrução rt, rs, unisgned
+            if(validate_uns(campos[3])): #é uma instrução válida
+                return opcode_i[campos[0]][0] + registradores[campos[2]] + registradores[campos[1]] + decimalToBinary(int(campos[3]), 16)
+            else:
+                raise Exception("'{}': Campo imediato unsigned inválido".format(linha))
         else: #instrução rs, rt, label
             if(validate_label(campos[3])): #é uma instrução válida
                 return opcode_i[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + decimalToBinary(int(labels[campos[3]]), 16)
@@ -99,8 +152,12 @@ def instrucao_i(linha):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
         if(not (validate_reg(campos[1]) and validate_reg(campos[3])) ):
             raise Exception("'{}': nome de registrador inválido".format(linha))
-        if(not (validate_imm(campos[2])) ):
-            raise Exception("'{}': Campo imediato inválido".format(linha))
+        if(campos[0] in ['lbu', 'lhu']):
+            if(not (validate_uns(campos[2])) ):
+                raise Exception("'{}': Campo imediato unsigned inválido".format(linha))
+        else:
+            if(not (validate_imm(campos[2])) ):
+                raise Exception("'{}': Campo imediato inválido".format(linha))
 
         return opcode_i[campos[0]][0] + registradores[campos[3]] + registradores[campos[1]] + decimalToBinary(int(campos[2]), 16)
 
@@ -117,7 +174,7 @@ def instrucao_j(linha):
             raise Exception("'{}': Formato dos campos inválidos".format(linha))
         if(not validate_label(campos[1])):
             raise Exception("'{}': Campo de label inválido".format(linha))
-        return opcode_j[campos[0]][0] + decimalToBinary(int( label[campos[1]] ), 26)
+        return opcode_j[campos[0]][0] + decimalToBinary(int( labels[campos[1]] ), 26)
     
     elif(campos[0] in ['jalr']): #instrução rd, rs
         if(len(campos) != 3):
@@ -190,14 +247,6 @@ def instrucao_r(linha):
             raise Exception("'{}': campo de shamt inválido".format(linha))
 
         return opcode_r[campos[0]][0] + '00000' + registradores[campos[2]] + registradores[campos[1]] + decimalToBinary(int(campos[3]), 5) + opcode_r[campos[0]][1]
-    
-    elif(campos[0] in ['mult', 'multu']): #instrução rs, rt
-        if(len(campos) != 3):
-            raise Exception("'{}': Formato dos campos inválidos".format(linha))
-        if(not ( validate_reg(campos[1]) and validate_reg(campos[2]) ) ):
-            raise Exception("'{}': nome de registrador inválido".format(linha))
-
-        return opcode_r[campos[0]][0] + registradores[campos[1]] + registradores[campos[2]] + opcode_r[campos[0]][1] + opcode_r[campos[0]][2]
 
     elif(campos[0] in ['sllv', 'srav', 'srlv']): #instrução rd, rt, rs
         if(len(campos) != 4):
