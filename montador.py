@@ -47,9 +47,9 @@ def decimalToBinary(n, largura):
         return binary[-largura:]
     else:
         if(n >= 0):
-            return '0'*(largura - len(binary)) + binary
+            return binary.rjust(largura, '0')
         else:
-            return '1'*(largura - len(binary)) + binary
+            return binary.rjust(largura, '1')
 
 def validate_reg(nome):
     return nome in registradores
@@ -110,7 +110,7 @@ def instrucao_i(linha):
             if(validate_uns(campos[2])): #é uma instrução válida
                 return opcode_i[campos[0]][0] + '00000' + registradores[campos[1]] + decimalToBinary(int( campos[2] ), 16)
             else:
-                raise Exception("'{}': Campo imediato inválido".format(linha))
+                raise Exception("'{}': Campo imediato unsigned inválido".format(linha))
                 
         else: #instrução rs, label
             if(validate_label(campos[2])): #é uma instrução válida
@@ -302,7 +302,9 @@ with open('OPCODE_I.txt', 'r') as f: #este arquivo possui os opcodes do tipo R
 
         linha = f.readline()
 
-with open('teste1.asm', 'r') as f:
+arquivo = input("Insira o nome do arquivo: ")
+
+with open(arquivo, 'r') as f:
     linha = f.readline()
     while(linha != ''):
         linha = linha.lower() #deixa tudo minúsculo
@@ -320,14 +322,14 @@ while(cont < len(codigo)): #busca por labels
         linha = codigo[cont].partition(':') #separa o código da label
 
         if(len(linha[0]) == 0): #tamanho da label não pode ser zero
-            raise Exception('Sintaxe incorreta')
+            raise Exception('"{}": Sintaxe incorreta'.format(codigo[cont]))
 
         if(not( linha[0][0].isalpha()) ): #label não pode começar com número
-            raise Exception('Nome de label inicia somente com número')
+            raise Exception('"{}": Nome de label inicia somente com letra'.format(codigo[cont]))
 
         for i in linha[0]:
             if(not (i.isalpha() or i.isdigit())): #label pode ter somente número e letra
-                raise Exception('Nome de label inválida')
+                raise Exception('"{}": Nome de label inválida'.format(codigo[cont]))
 
         if(linha[0] not in labels): #adiciona a label
             labels[linha[0]] = cont
@@ -357,12 +359,18 @@ for i in range(0, len(codigo)): #leitura do código
     else:
         raise Exception('Instrução não reconhecida')
 
+nome_arquivo = arquivo.rpartition(".")
+nome_arquivo = nome_arquivo[0]
+nome_arquivo = nome_arquivo + '_binario.txt'
 
-with open('binario.txt', 'w') as f:
+with open(nome_arquivo, 'w') as f:
     for linha in binario:
         f.write(linha + '\n')
 
+print("Código binário criado com sucesso. Nome do arquivo: {}".format(nome_arquivo))
 
+
+''' #Descomente caso queira debugar
 print(registradores)
 print()
 print(opcode_i)
@@ -374,3 +382,4 @@ print()
 print(codigo)
 print()
 print(labels)
+'''
